@@ -75,10 +75,13 @@ class trigger(ux):
                         4: 'dyn_hue2',
                         5: 'dyn_sat2',
                         6: 'dyn_val2',
-                        7: 'osc_blend',
+                        
+                        7: 'dyn_blend',
                         8: 'dyn_blur',
                         9: 'dyn_dilate',
-                        10: 'dyn_frame'
+                        
+                        10: 'dyn_frame',
+                        11: 'dyn_recursion_depth'
                         }
         
         self.routing_options=len(self.routing_dict)-1
@@ -194,6 +197,7 @@ class osc(ux):
                         8: 'osc_frame',
                         9: 'osc_M1_img1',
                         10: 'osc_M2_img1',
+                        11: 'osc_recursion_depth'
                         }
         
         self.routing_dict2 = {0: 'nothing',
@@ -206,7 +210,8 @@ class osc(ux):
                         7: 'osc_dilate',
                         8: 'osc_frame',
                         9: 'osc_M4_img1',
-                        10: 'osc_M5_img1'
+                        10: 'osc_M5_img1',
+                        11: 'osc_recursion_depth'
                         }
 
         self.routing_options = len(self.routing_dict1)-1

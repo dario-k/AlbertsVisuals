@@ -45,6 +45,8 @@ class Vid:
         
         # size of image
         self.rows, self.cols = np.shape(self.videobuffer[0])[0:2]
+        self.rows_raw, self.cols_raw = rows, cols
+
         
         # dict with all the parameters that can change the look of a frame
         # osc means they are modified by the oscillators
@@ -109,18 +111,27 @@ class Vid:
                           'M5_t_factor': 50,
                           'M6_t_factor': 50, # not used yet
                           'M1_t_add': 50,
-                          'M4_t_add': 50
+                          'M4_t_add': 50,
+                          
+                          'dyn_recursion_depth': 0,
+                          'osc_recursion_depth': 0,
+                          'static_recursion_depth': 1
                           }
 
 
     def compute_and_disp_frame(self):
         """this function calls all the functions neccessary to proceed to the next frame"""
         self.read_from_buffer()
-        img1, img2 = self.afine_distortion()
-        img1, img2 = self.color(img1, img2)
-
-        img = self.blend(img1, img2)
-        img = self.dilate_and_blur(img)
+        
+        for i in range(0,int(self.parameter_dict['static_recursion_depth']+self.parameter_dict['osc_recursion_depth']+self.parameter_dict['dyn_recursion_depth'])):
+            img1, img2 = self.afine_distortion()
+            img1, img2 = self.color(img1, img2)
+    
+            img = self.blend(img1, img2)
+            img = self.dilate_and_blur(img)
+            self.img_hsv, self.img_hsv2 = img, copy.copy(img)
+            
+            
         self.show_frame(img)
         
         
@@ -259,8 +270,13 @@ class Vid:
 
     
     def zoom_and_resize(self, image):
+        """
+        zoom into image and resizes it to whatever is set in self.cold and self.rows
+        it is applied to a frame before resizing, if it needs to be applied after resizing self.rows_raw and self.cols_raw 
+        needs to be replaced with self.rows and self.cols
+        """
         zoom_x = self.parameter_dict['zoom'] * 4
-        zoom_y = self.parameter_dict['zoom'] * self.rows/self.cols * 4
-        croped = image[int(zoom_y/2.0):int(self.rows - (zoom_y/2.0)), int(zoom_x/2.0):int(self.cols -(zoom_x/2.0))]
+        zoom_y = self.parameter_dict['zoom'] * 4 * self.rows/self.cols
+        croped = image[int(zoom_y/2.0):int(self.rows_raw - (zoom_y/2.0)), int(zoom_x/2.0):int(self.cols_raw -(zoom_x/2.0))]
         
         return cv2.resize(croped,(int(self.cols),int(self.rows)))

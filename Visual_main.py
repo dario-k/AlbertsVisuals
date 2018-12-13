@@ -6,7 +6,8 @@ Created on Tue Dec 11 11:26:18 2018
 
 #    Feel_You_Near.wav'#Do.wav'#Feel_You_Near.wav' Fainting_Giants.wav'
 
-
+Sequenz01_6
+Sequenz01_2
 
 """
 import cv2
@@ -18,11 +19,12 @@ from Video import Vid
 from Control_Interface import fader_ux, trigger, osc
 from Control_Visual import visualize
 
-def main(video_filename = '/Users/Dario/Pictures/Nebula.mp4', audio_filename = '/Users/Dario/Pictures/Vsitor/Feel_You_Near.wav'):
+def main(video_filename = '/Users/Dario/Pictures/Sequenz01_6.mp4', audio_filename = '/Users/Dario/Pictures/Vsitor/Dare_To.wav'):
     """ audio should be a wav file, video should be mp4 other video formats might work as well"""
     
     #create albert object that contains audio and video processing
-    albi = Albert(v_filename=video_filename, a_filename=audio_filename, number_of_triggers = 2, number_of_oscillators = 3, disp_fft=True)
+    albi = Albert(v_filename=video_filename, a_filename=audio_filename, number_of_triggers = 2, number_of_oscillators = 3, resizefactor=0.3, disp_fft=True) 
+    
     
     while albi.status:
         
@@ -39,7 +41,7 @@ def main(video_filename = '/Users/Dario/Pictures/Nebula.mp4', audio_filename = '
 class Albert:
     """this class generates the video and audio objects and performs all the computations necessary to update a frame"""
     
-    def __init__(self, v_filename, a_filename, number_of_triggers = 2, number_of_oscillators = 3, disp_fft=False):
+    def __init__(self, v_filename, a_filename, number_of_triggers = 2, number_of_oscillators = 3, resizefactor=0.5, disp_fft=False):
         print('----------------------------------------------------------')
         print('-----------------HELLOOOOOO ------------------------------')
         print('--------------- I am Albert ------------------------------')
@@ -50,15 +52,16 @@ class Albert:
         self.v_filename = v_filename
         self.a_filename = a_filename
         self.status = True # turns false when user exits the program
+        self.resizefactor = resizefactor
         
         # generat audio and video objects
         self.audio_object = AudioFile(self.a_filename)
         self.audio_object.apply_A_weighting = True # enable or disable A weighting of audio samples
     
-        self.video_object = Vid(self.v_filename, resizefactor=0.5)
+        self.video_object = Vid(self.v_filename, resizefactor=self.resizefactor)
         self.video_object.interpolationfactor = 1.5
         self.video_object.audiorate = self.audio_object.rate
-        self.video_object.framerate = 27 # desired framerate
+        self.video_object.framerate = 25 # desired framerate
         
         
         # generate fader objects
@@ -134,6 +137,10 @@ class Albert:
         if k == ord('m'):
             #flips image
             self.video_object.flipimage = not(self.video_object.flipimage)
+        elif k == ord('r'):
+            self.video_object.parameter_dict['static_recursion_depth'] +=  1
+        elif k == ord('d'):
+            self.video_object.parameter_dict['static_recursion_depth'] -=  1
         elif k== ord('w'):
             #enable / disable audio sample A weighting
             self.audio_object.apply_A_weighting=not(self.audio_object.apply_A_weighting)
@@ -145,17 +152,17 @@ class Albert:
         elif k==ord('S'): 
             #save default settings
             self.save_settings(filename='Albert_settings_default')
-        elif k==ord('r'): 
+        elif k==ord('l'): 
             # recall settings
             load_name = input('loading settings, enter filename: ')
             self.recal_settings(filename=load_name)
-        elif k==ord('R'):
+        elif k==ord('L'):
             # recall default settings
             self.recal_settings(filename='Albert_settings_default')
         elif k==ord('+'):
             self.video_object.interpolationfactor+=0.1 #makes video larger
         elif k==ord('-'):
-            self.video_object.interpolationfactor-=0.1
+            self.videRo_object.interpolationfactor-=0.1
         if k == 27:
             #stop video and audio
             frame_rate = self.nrframes / (time.time() - self.start_time)
