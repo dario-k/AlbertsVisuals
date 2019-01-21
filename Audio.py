@@ -92,7 +92,7 @@ class AudioFile:
     def fft(self):
         """ fft of audio, if audio ended, open the file again"""
         
-        print('nr appends (audio) : ', self.nr_appends_since_read)
+#        print('nr appends (audio) : ', self.nr_appends_since_read)
         # this is the new implementation with dynamic chunk size, still kind of stupid, will make a better one sometime...
         # it can deal with with chunk sizes of 1024 to 4096 and up, this allows to deal with different framerates or variation in computation time,
         # however it would be better if it was continous and not bound to chunk size
@@ -100,8 +100,9 @@ class AudioFile:
         if self.nr_appends_since_read==0:
             #if the framerate is set too high, the audio chunk is not ready yet. need to wait a bit...
             print('zero audio appends!! something went wrong, likely framerate is too high!!!')
-            time.sleep(0.02)
-            return self.fft()
+            return None, None, False
+#            time.sleep(0.02)
+#            return self.fft()
         elif self.nr_appends_since_read==1:
             nr_appends_backup = 1
             self.nr_appends_since_read=0 # imideately reset because the audio thread might read samples while this is happening
@@ -143,9 +144,7 @@ class AudioFile:
         # check if audio file ended --> reopen
         if len(amplitude) != len(self.window):
             print('Audio File ended!')
-            self.close()
-            self.__init__(self.file)
-            return self.fft()
+            return None, None, False
 
         yf = fft(amplitude*self.window) 
         yfft = np.abs(yf[0:self.chunk//2])  * (12.0 / (self.chunk))
@@ -153,7 +152,7 @@ class AudioFile:
         if self.apply_A_weighting:
             yfft = np.multiply(yfft,self.A_weighting_factors[nr_appends_backup-1])
 
-        return yfft, amplitude
+        return yfft, amplitude, True
 
 
     def A_weighting(self, f):
