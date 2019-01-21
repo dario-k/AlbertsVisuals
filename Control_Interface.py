@@ -12,10 +12,12 @@ class ux:
     """
     user interface class
     """
-    def __init__(self, name):
+    def __init__(self, name, displayGUI):
         #load config settings
         self.name = name
-        cv2.namedWindow(self.name)
+        self.displayGUI = displayGUI
+        if displayGUI: cv2.namedWindow(self.name)
+        
     def nothing(self, x):
             pass
 
@@ -25,20 +27,25 @@ class fader_ux(ux):
     gui class for faders
     """
     
-    def __init__(self, name, slidernames, slidervalues, maxvalue=255):
-        ux.__init__(self, name)
+    def __init__(self, name, slidernames, slidervalues, maxvalue=255, displayGUI=True):
+        ux.__init__(self, name, displayGUI=True)
         self.slidernames = slidernames #list of names
         self.slidervalues = slidervalues #list of values
         
-        for sname in self.slidernames:
-            cv2.createTrackbar(sname,self.name, 0, maxvalue, self.nothing)
+        if self.displayGUI:
+            for sname in self.slidernames:
+                cv2.createTrackbar(sname,self.name, 0, maxvalue, self.nothing)
         
-        #set initial vlaues
-        self.set_all_values(self.slidervalues)
+            #set initial vlaues
+            self.set_all_values(self.slidervalues)
     
-    def set_all_values(self, values):
-        for (nam,val) in zip(self.slidernames, values):
-            cv2.setTrackbarPos(nam, self.name, val)
+    def set_all_values(self, values, GUI=True):
+        """set values when recaling settings or init"""
+        if GUI:
+            for (nam,val) in zip(self.slidernames, values):
+                cv2.setTrackbarPos(nam, self.name, val)
+        self.slidervalues=values
+        self.displayGUI=GUI
     
     def update_values(self):
         """update slider values, should be done in a callback in the future..."""
@@ -50,7 +57,7 @@ class fader_ux(ux):
     def set_values_video(self, video):
         """ set values of video object """
         #maybe there is a way to do it in the callback???
-        self.update_values()
+        if self.displayGUI: self.update_values()
         for sname, svalue in zip(self.slidernames, self.slidervalues):
             video.parameter_dict[sname] = svalue
 
@@ -61,10 +68,9 @@ class trigger(ux):
     call calc_output to get the output after the envelope
     """
     def __init__(self, name, audiorate, frequency_r=(20,20000), f_width=(1,2000), max_attack_release=(10,20), displayGUI=True):
-        ux.__init__(self, name)
+        ux.__init__(self, name, displayGUI)
         
         self.audiorate=audiorate
-        self.displayGUI = displayGUI
         
         #routing
         self.routing_t = 0
@@ -112,13 +118,24 @@ class trigger(ux):
         self.dyn = 0
 
         
-    def set_values(self, gain, frequency, frequency_width, routing, attack, release):
-        cv2.setTrackbarPos('Gain', self.name, gain)
-        cv2.setTrackbarPos('Frequency [Hz]', self.name, frequency)
-        cv2.setTrackbarPos('Width [Hz]', self.name, frequency_width)
-        cv2.setTrackbarPos('Route', self.name, routing)
-        cv2.setTrackbarPos('Attack', self.name, attack)
-        cv2.setTrackbarPos('Release', self.name, release)
+    def set_values(self, gain, frequency, frequency_width, routing, attack, release, GUI=True):
+        
+        if GUI:
+            cv2.setTrackbarPos('Gain', self.name, gain)
+            cv2.setTrackbarPos('Frequency [Hz]', self.name, frequency)
+            cv2.setTrackbarPos('Width [Hz]', self.name, frequency_width)
+            cv2.setTrackbarPos('Route', self.name, routing)
+            cv2.setTrackbarPos('Attack', self.name, attack)
+            cv2.setTrackbarPos('Release', self.name, release)
+        
+        self.gain = gain
+        self.frequency = frequency
+        self.frequency_width = frequency_width
+        self.routing = routing
+        self.attack = attack
+        self.release = release
+        
+        self.displayGUI=GUI
     
     def get_values(self):
         """get values from trackbars"""
@@ -132,7 +149,6 @@ class trigger(ux):
         
     def envelope(self, sample):
         """calculate envelope output"""
-        
         self.en_baseline = self.en_baseline*0.95+sample*0.05
         th = 0
         s_b = (sample-self.en_baseline)*self.gain
@@ -171,6 +187,7 @@ class trigger(ux):
         if(not(self.routing_t==self.routing)):
             video.parameter_dict[self.routing_dict[self.routing_t]] = 0
         video.parameter_dict[self.routing_dict[self.routing]] = self.dyn
+        self.routing_t=self.routing
         
 
 class osc(ux):
@@ -179,9 +196,8 @@ class osc(ux):
     """
     
     def __init__(self, name, displayGUI=True):
-        ux.__init__(self, name)
+        ux.__init__(self, name, displayGUI)
         
-        self.displayGUI = displayGUI
         self.max_speed = 100
         self.max_amp = 1000
         
@@ -196,8 +212,7 @@ class osc(ux):
                         7: 'osc_blur',
                         8: 'osc_frame',
                         9: 'osc_M1_img1',
-                        10: 'osc_M2_img1',
-                        11: 'osc_recursion_depth'
+                        10: 'osc_M2_img1'
                         }
         
         self.routing_dict2 = {0: 'nothing',
@@ -210,8 +225,7 @@ class osc(ux):
                         7: 'osc_dilate',
                         8: 'osc_frame',
                         9: 'osc_M4_img1',
-                        10: 'osc_M5_img1',
-                        11: 'osc_recursion_depth'
+                        10: 'osc_M5_img1'
                         }
 
         self.routing_options = len(self.routing_dict1)-1
@@ -240,14 +254,24 @@ class osc(ux):
         self.routing2_t = 1
         
         
-    def set_values(self, speed1, amp1, routing1, speed2, amp2, routing2):
-        """sets values of the trackbars"""
-        cv2.setTrackbarPos('Speed 1', self.name, speed1)
-        cv2.setTrackbarPos('Amplitude 1', self.name, amp1)
-        cv2.setTrackbarPos('Routing 1', self.name, routing1)
-        cv2.setTrackbarPos('Speed 2', self.name, speed2)
-        cv2.setTrackbarPos('Amplitude 2', self.name, amp2)
-        cv2.setTrackbarPos('Routing 2', self.name, routing2)
+    def set_values(self, speed1, amp1, routing1, speed2, amp2, routing2, GUI=True):
+        """sets values of the trackbars of if no gui only of the internal values"""
+        if GUI:
+            cv2.setTrackbarPos('Speed 1', self.name, speed1)
+            cv2.setTrackbarPos('Amplitude 1', self.name, amp1)
+            cv2.setTrackbarPos('Routing 1', self.name, routing1)
+            cv2.setTrackbarPos('Speed 2', self.name, speed2)
+            cv2.setTrackbarPos('Amplitude 2', self.name, amp2)
+            cv2.setTrackbarPos('Routing 2', self.name, routing2)
+            
+        self.speed1=speed1
+        self.amp1=amp1
+        self.routing1=routing1
+        self.speed2=speed2
+        self.amp2=amp2
+        self.routing2=routing2
+        
+        self.displayGUI=GUI
         
         
     def get_values(self):
@@ -312,3 +336,4 @@ class osc(ux):
         #routing t-1, so it can be set to 0 when routing changes
         self.routing1_t = self.routing1
         self.routing2_t = self.routing2
+        
