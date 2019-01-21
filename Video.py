@@ -24,6 +24,7 @@ class Vid:
         self.interpolationfactor = 1.0 # enables the processing with a lower resolution and upscales to show the image
         self.flipimage = False
         self.colmap = 0 # colormap applied to video (0 no colmalp, 1-4 different colormaps)
+        self.high_comp_load = True #computational load, if true perspective transforms are possible
         
 
         # make videobuffer
@@ -119,20 +120,26 @@ class Vid:
                           }
 
 
-    def compute_and_disp_frame(self):
+    def compute_and_disp_frame(self, return_frame=False):
         """this function calls all the functions neccessary to proceed to the next frame"""
         self.read_from_buffer()
         
-        for i in range(0,int(self.parameter_dict['static_recursion_depth']+self.parameter_dict['osc_recursion_depth']+self.parameter_dict['dyn_recursion_depth'])):
-            img1, img2 = self.afine_distortion()
+        for i in range(0,max(1,int(self.parameter_dict['static_recursion_depth']+self.parameter_dict['osc_recursion_depth']+self.parameter_dict['dyn_recursion_depth']))):
+            img1 = self.img_hsv
+            img2 = self.img_hsv2
+            if self.high_comp_load: img1, img2 = self.afine_distortion(img1, img2)
             img1, img2 = self.color(img1, img2)
     
             img = self.blend(img1, img2)
             img = self.dilate_and_blur(img)
             self.img_hsv, self.img_hsv2 = img, copy.copy(img)
             
+        if self.flipimage: img = self.mirror_frame(img)
             
-        self.show_frame(img)
+        if return_frame:
+            return img
+        else:
+            self.show_frame(img)
         
         
     def blend(self, img_hsv1, img_hsv2):
@@ -175,7 +182,7 @@ class Vid:
         self.img_hsv2 = copy.copy(self.img_hsv)
 
 
-    def afine_distortion(self):
+    def afine_distortion(self, img_hsv, img_hsv2):
         """
         performs afine transform distortions on both images
         the parameters for the transform matrix M2 derived from M1 by multiplication with a factor
@@ -198,8 +205,8 @@ class Vid:
                           self.parameter_dict['osc_translation_y_img2']]])
 
         #transform img 1 and 2
-        img_hsv2 = cv2.warpAffine(self.img_hsv2,M1,(self.cols,self.rows))
-        img_hsv = cv2.warpAffine(self.img_hsv,M2,(self.cols,self.rows))
+        img_hsv2 = cv2.warpAffine(img_hsv2,M1,(self.cols,self.rows))
+        img_hsv = cv2.warpAffine(img_hsv,M2,(self.cols,self.rows))
         
         return img_hsv, img_hsv2
 
@@ -259,12 +266,15 @@ class Vid:
         return frame
     
     
+    def mirror_frame(self, frame):
+        """mirrors on y axis is set"""
+        frame_flipped = cv2.flip(frame, 1)
+        frame[0:self.rows, 0:int(self.cols/2)] = frame_flipped[0:self.rows, 0:int(self.cols/2)]
+        return frame
+    
+    
     def show_frame(self, frame):
-        """ shows frame, mirrors on y axis if flipimage is set"""
-        if self.flipimage:
-            frame_flipped = cv2.flip(frame, 1)
-            frame[0:self.rows, 0:int(self.cols/2)] = frame_flipped[0:self.rows, 0:int(self.cols/2)]
-        
+        """ shows frame"""       
         frame = cv2.resize(frame,(int(self.cols * self.interpolationfactor),int(self.rows * self.interpolationfactor)), interpolation = cv2.INTER_LINEAR)
         cv2.imshow('Visuals',frame)
 
